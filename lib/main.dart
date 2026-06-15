@@ -7,8 +7,14 @@ import 'screens/weapon_select.dart';
 import 'screens/map_select.dart';
 import 'screens/game_over.dart';
 
+import 'package:flutter/services.dart';
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.landscapeLeft,
+    SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
+  ]);
   runApp(const MyApp());
 }
 

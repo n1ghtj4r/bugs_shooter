@@ -111,18 +111,19 @@ class MainMenu extends StatelessWidget {
                     if (isLandscape)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(child: _btn(context, 'JOYSTICK MODE', ControlMode.joystick, Icons.videogame_asset)),
+                          Expanded(child: _btn(context, 'JOYSTICK MODE', ControlMode.joystick, Icons.videogame_asset, 'Touch controls with on-screen buttons for Shot and Dash.')),
                           const SizedBox(width: 20),
-                          Expanded(child: _btn(context, 'KEYBOARD MODE', ControlMode.keyboard, Icons.keyboard)),
+                          Expanded(child: _btn(context, 'KEYBOARD MODE', ControlMode.keyboard, Icons.keyboard, 'Use "WASD" to move and "SPACE" to dash. Click to shoot.')),
                         ],
                       )
                     else
                       Column(
                         children: [
-                          _btn(context, 'JOYSTICK MODE', ControlMode.joystick, Icons.videogame_asset),
+                          _btn(context, 'JOYSTICK MODE', ControlMode.joystick, Icons.videogame_asset, 'Touch controls with on-screen Shot/Dash.'),
                           const SizedBox(height: 15),
-                          _btn(context, 'KEYBOARD MODE', ControlMode.keyboard, Icons.keyboard),
+                          _btn(context, 'KEYBOARD MODE', ControlMode.keyboard, Icons.keyboard, 'Move: WASD | Dash: Space | Shoot: Mouse'),
                         ],
                       ),
                   ],
@@ -135,41 +136,56 @@ class MainMenu extends StatelessWidget {
     );
   }
 
-  Widget _btn(BuildContext context, String label, ControlMode mode, IconData icon) {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.orange.shade900.withOpacity(0.85),
-        foregroundColor: Colors.white,
-        shadowColor: Colors.orangeAccent.withOpacity(0.5),
-        elevation: 6,
-        padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 20),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: Colors.orangeAccent, width: 1.5),
-        ),
-      ),
-      onPressed: () {
-        FlameAudio.play('select-a.ogg');
-        game.controlMode = mode;
-        game.overlays.remove('MainMenu');
-        game.overlays.add('CharacterSelect');
-      },
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 26),
-          const SizedBox(width: 12),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.5,
-              fontFamily: 'monospace',
+  Widget _btn(BuildContext context, String label, ControlMode mode, IconData icon, String description) {
+    return Column(
+      children: [
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange.shade900.withOpacity(0.85),
+            foregroundColor: Colors.white,
+            shadowColor: Colors.orangeAccent.withOpacity(0.5),
+            elevation: 6,
+            padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 20),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: const BorderSide(color: Colors.orangeAccent, width: 1.5),
             ),
           ),
-        ],
-      ),
+          onPressed: () {
+            FlameAudio.play('select-a.ogg');
+            game.controlMode = mode;
+            game.overlays.remove('MainMenu');
+            game.overlays.add('CharacterSelect');
+          },
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 26),
+              const SizedBox(width: 12),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          description,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.white54,
+            fontSize: 11,
+            fontStyle: FontStyle.italic,
+            fontFamily: 'monospace',
+          ),
+        ),
+      ],
     );
   }
 }

@@ -4,6 +4,7 @@ import 'bugs_shooter_game.dart';
 import 'game_data.dart';
 import 'obstacle.dart';
 import 'wall.dart';
+import 'enemy.dart';
 import 'dart:math';
 
 class Bullet extends SpriteComponent with HasGameRef<BugsShooterGame>, CollisionCallbacks {
@@ -30,11 +31,14 @@ class Bullet extends SpriteComponent with HasGameRef<BugsShooterGame>, Collision
     // All bullets are now the same size as requested
 
     // Correcting Rotation: Pointy end faces the direction of travel
-    // We use atan2 for precise 360-degree orientation
     angle = atan2(direction.y, direction.x) + (pi / 2);
     
-    // Hitbox aligned with the new straight bullet shape
-    add(CircleHitbox(radius: 5, anchor: Anchor.center, position: Vector2.zero()));
+    // Use RectangleHitbox for better 360-degree intersection with long bullets
+    add(RectangleHitbox(
+      size: Vector2(size.x, size.y),
+      anchor: Anchor.center,
+      position: Vector2.zero(),
+    ));
   }
 
   @override
@@ -49,6 +53,8 @@ class Bullet extends SpriteComponent with HasGameRef<BugsShooterGame>, Collision
   @override
   void onCollision(Set<Vector2> points, PositionComponent other) {
     super.onCollision(points, other);
-    if (other is Obstacle || other is Wall) removeFromParent();
+    if (other is Obstacle || other is Wall || other is Enemy) {
+      removeFromParent();
+    }
   }
 }

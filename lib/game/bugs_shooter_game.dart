@@ -5,6 +5,7 @@ import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/effects.dart';
 import 'package:flame/game.dart';
+import 'package:flame/input.dart';
 import 'package:flame/sprite.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/material.dart' hide Rectangle;
@@ -76,6 +77,8 @@ class BugsShooterGame extends FlameGame
   double reloadTimer = 0.0;
   final double reloadDuration = 1.5;
   bool get isReloading => reloadTimer > 0;
+
+  double _fireTimer = 0;
 
   int wave = 1;
   int enemiesSpawnedInWave = 0;
@@ -165,6 +168,24 @@ class BugsShooterGame extends FlameGame
         margin: const EdgeInsets.only(left: 40, bottom: 40),
       );
       camera.viewport.add(joystick!);
+
+      // Shoot Button for Joystick Mode
+      final shootButton = HudButtonComponent(
+        button: CircleComponent(radius: 35, paint: Paint()..color = Colors.red.withOpacity(0.5)),
+        buttonDown: CircleComponent(radius: 35, paint: Paint()..color = Colors.red),
+        margin: const EdgeInsets.only(right: 40, bottom: 120),
+        onPressed: () => _shoot(crosshair.position),
+      );
+      camera.viewport.add(shootButton);
+
+      // Dash Button for Joystick Mode
+      final dashButton = HudButtonComponent(
+        button: CircleComponent(radius: 30, paint: Paint()..color = Colors.blue.withOpacity(0.5)),
+        buttonDown: CircleComponent(radius: 30, paint: Paint()..color = Colors.blue),
+        margin: const EdgeInsets.only(right: 120, bottom: 40),
+        onPressed: () => player.dash(),
+      );
+      camera.viewport.add(dashButton);
     }
     resumeEngine();
   }
@@ -221,26 +242,20 @@ class BugsShooterGame extends FlameGame
   }
 
   void _shoot(Vector2 target) {
-    if (health <= 0 || paused || selectedWeapon == null || isReloading) return;
+    if (health <= 0 || paused || selectedWeapon == null || isReloading || _fireTimer > 0) return;
     if (ammo <= 0) return;
 
     final weapon = selectedWeapon!;
     ammo -= 1; 
+    _fireTimer = 1 / weapon.fireRate;
+
     if (ammo <= 0) {
       reloadTimer = reloadDuration;
     }
 
     final baseDir = (target - player.position).normalized();
+    world.add(Bullet(position: player.position.clone(), direction: baseDir, weapon: weapon));
 
-    if (weapon.spreadCount > 1) {
-      for (int i = 0; i < weapon.spreadCount; i++) {
-        final angle = (i - (weapon.spreadCount - 1) / 2) * 0.2;
-        final dir = baseDir.clone()..rotate(angle);
-        world.add(Bullet(position: player.position.clone(), direction: dir, weapon: weapon));
-      }
-    } else {
-      world.add(Bullet(position: player.position.clone(), direction: baseDir, weapon: weapon));
-    }
     FlameAudio.play(weapon.shootSound, volume: 0.4);
   }
 
@@ -279,6 +294,13 @@ class BugsShooterGame extends FlameGame
     super.update(dt);
     if (health <= 0 && !paused) {
       pauseEngine(); FlameAudio.play('lose-a.ogg'); overlays.add('GameOver');
+    }
+
+    if (_fireTimer > 0) _fireTimer -= dt;
+
+    // In Joystick mode, if moving, update crosshair to be in front of player
+    if (controlMode == ControlMode.joystick && joystick != null && !joystick!.delta.isZero()) {
+      crosshair.position = player.position + joystick!.relativeDelta * 200;
     }
 
     // Ammo Reloading

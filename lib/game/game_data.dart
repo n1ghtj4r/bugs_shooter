@@ -76,12 +76,12 @@ final List<CharacterData> allCharacters = [
 ];
 
 final List<WeaponData> allWeapons = [
-  WeaponData(id: 0, name: 'Pistol', tileId: 0, tilePath: 'Weapons/Tiles/tile_0000.png', bulletSpeed: 700, damage: 1.0, fireRate: 3.5, crosshairId: 23, shootSound: 'shoot-a.ogg', description: 'Reliable sidearm.'),
-  WeaponData(id: 1, name: 'Shotgun', tileId: 1, tilePath: 'Weapons/Tiles/tile_0001.png', bulletSpeed: 500, damage: 1.2, fireRate: 1.4, crosshairId: 20, shootSound: 'shoot-b.ogg', spreadCount: 3, description: 'Devastating close-range burst.'),
-  WeaponData(id: 2, name: 'Uzi', tileId: 2, tilePath: 'Weapons/Tiles/tile_0002.png', bulletSpeed: 800, damage: 0.6, fireRate: 9.0, crosshairId: 26, shootSound: 'shoot-c.ogg', description: 'High fire-rate submachine gun.'),
-  WeaponData(id: 3, name: 'Sniper', tileId: 3, tilePath: 'Weapons/Tiles/tile_0003.png', bulletSpeed: 1800, damage: 10.0, fireRate: 0.8, crosshairId: 25, shootSound: 'shoot-d.ogg', description: 'Long range armor-piercing rifle.'),
-  WeaponData(id: 4, name: 'Rifle', tileId: 4, tilePath: 'Weapons/Tiles/tile_0004.png', bulletSpeed: 1000, damage: 1.5, fireRate: 5.5, crosshairId: 24, shootSound: 'shoot-e.ogg', description: 'Balanced assault combat rifle.'),
-  WeaponData(id: 5, name: 'Blaster', tileId: 5, tilePath: 'Weapons/Tiles/tile_0005.png', bulletSpeed: 850, damage: 2.2, fireRate: 3.0, crosshairId: 22, shootSound: 'shoot-f.ogg', isLaser: true, description: 'Fires large plasma energy balls.'),
-  WeaponData(id: 6, name: 'Heavy MG', tileId: 6, tilePath: 'Weapons/Tiles/tile_0006.png', bulletSpeed: 800, damage: 2.5, fireRate: 6.5, crosshairId: 21, shootSound: 'shoot-g.ogg', description: 'Rapid suppression machine gun.'),
-  WeaponData(id: 7, name: 'Hand Cannon', tileId: 7, tilePath: 'Weapons/Tiles/tile_0007.png', bulletSpeed: 1100, damage: 4.5, fireRate: 1.6, crosshairId: 28, shootSound: 'shoot-h.ogg', description: 'Classic heavy impact handgun.'),
+  WeaponData(id: 0, name: 'Pistol', tileId: 0, tilePath: 'Weapons/Tiles/tile_0000.png', bulletSpeed: 800, damage: 3.5, fireRate: 3.5, crosshairId: 23, shootSound: 'shoot-a.ogg', description: 'Reliable sidearm.'),
+  WeaponData(id: 1, name: 'Shotgun', tileId: 1, tilePath: 'Weapons/Tiles/tile_0001.png', bulletSpeed: 600, damage: 15.0, fireRate: 1.2, crosshairId: 20, shootSound: 'shoot-b.ogg', description: 'Devastating close-range burst.'),
+  WeaponData(id: 2, name: 'Uzi', tileId: 2, tilePath: 'Weapons/Tiles/tile_0002.png', bulletSpeed: 1000, damage: 1.5, fireRate: 10.0, crosshairId: 26, shootSound: 'shoot-c.ogg', description: 'High fire-rate submachine gun.'),
+  WeaponData(id: 3, name: 'Sniper', tileId: 3, tilePath: 'Weapons/Tiles/tile_0003.png', bulletSpeed: 2200, damage: 25.0, fireRate: 0.6, crosshairId: 25, shootSound: 'shoot-d.ogg', description: 'Long range armor-piercing rifle.'),
+  WeaponData(id: 4, name: 'Rifle', tileId: 4, tilePath: 'Weapons/Tiles/tile_0004.png', bulletSpeed: 1200, damage: 4.0, fireRate: 6.0, crosshairId: 24, shootSound: 'shoot-e.ogg', description: 'Balanced assault combat rifle.'),
+  WeaponData(id: 5, name: 'Blaster', tileId: 5, tilePath: 'Weapons/Tiles/tile_0005.png', bulletSpeed: 950, damage: 6.5, fireRate: 2.5, crosshairId: 22, shootSound: 'shoot-f.ogg', isLaser: true, description: 'Fires large plasma energy balls.'),
+  WeaponData(id: 6, name: 'Heavy MG', tileId: 6, tilePath: 'Weapons/Tiles/tile_0006.png', bulletSpeed: 900, damage: 3.0, fireRate: 8.5, crosshairId: 21, shootSound: 'shoot-g.ogg', description: 'Rapid suppression machine gun.'),
+  WeaponData(id: 7, name: 'Hand Cannon', tileId: 7, tilePath: 'Weapons/Tiles/tile_0007.png', bulletSpeed: 1100, damage: 10.0, fireRate: 1.0, crosshairId: 28, shootSound: 'shoot-h.ogg', description: 'Classic heavy impact handgun.'),
 ];

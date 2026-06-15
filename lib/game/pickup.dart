@@ -21,9 +21,9 @@ class Pickup extends SpriteComponent with HasGameRef<BugsShooterGame> {
   Future<void> onLoad() async {
     int tileId = 0;
     switch (type) {
-      case PickupType.coin: tileId = 135; break; // Yellow coin
-      case PickupType.heart: tileId = 133; break;  // Heart icon (corrected)
-      case PickupType.fireRateBoost: tileId = 140; break; // Speed icon
+      case PickupType.coin: tileId = 157; break; // Yellow coin icon
+      case PickupType.heart: tileId = 133; break;  // Heart icon
+      case PickupType.fireRateBoost: tileId = 139; break; // Speed icon (lightning)
     }
 
     if (gameRef.interfaceSheet != null) {

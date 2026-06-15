@@ -36,9 +36,9 @@ class Enemy extends SpriteAnimationComponent with HasGameRef<BugsShooterGame>, C
     if (gameRef.enemySheet != null) {
       animation = gameRef.enemySheet!.createAnimation(row: row, stepTime: 0.1, from: 0, to: 4);
     }
-    
     // Fixed Hitbox Alignment: Use Vector2.zero() with Anchor.center
-    add(CircleHitbox(radius: 22, anchor: Anchor.center, position: Vector2.zero()));
+    // Slightly larger radius (25) to catch bullets from all 360 degrees reliably
+    add(CircleHitbox(radius: 25, anchor: Anchor.center, position: Vector2.zero()));
 
     // Enemy Health Bar: Positioned at 0, -38 (above head)
     _hpBarBg = RectangleComponent(
