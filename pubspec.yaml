@@ -1,0 +1,34 @@
+name: bugs_shooter
+description: A desert top-down shooter game.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flame: ^1.18.0
+  flame_audio: ^2.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/Players/Tilemap/
+    - assets/images/Players/Tiles/
+    - assets/images/Enemies/Tilemap/
+    - assets/images/Enemies/Tiles/
+    - assets/images/Weapons/Tilemap/
+    - assets/images/Weapons/Tiles/
+    - assets/images/Tiles/Tilemap/
+    - assets/images/Tiles/Tiles/
+    - assets/images/Interface/Tilemap/
+    - assets/images/Interface/Tiles/
+    - assets/audio/

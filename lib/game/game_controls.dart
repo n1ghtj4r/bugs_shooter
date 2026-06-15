@@ -1,0 +1,4 @@
+enum GameControl {
+  joystick,
+  keyboard,
+}
