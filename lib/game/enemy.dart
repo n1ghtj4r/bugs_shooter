@@ -24,7 +24,8 @@ class Enemy extends SpriteAnimationComponent with HasGameRef<BugsShooterGame>, C
 
   @override
   Future<void> onLoad() async {
-    final speedMultiplier = gameRef.selectedMapTheme?.enemySpeedMultiplier ?? 1.0;
+    // We can use a default multiplier since speed scaling is now primarily wave-based
+    final speedMultiplier = 1.0;
     speed = (130.0 + (wave * 5)) * speedMultiplier;
     
     // Increased HP to make them tougher
@@ -68,7 +69,7 @@ class Enemy extends SpriteAnimationComponent with HasGameRef<BugsShooterGame>, C
     position.add(dir * speed * dt);
     
     // Face the player
-    if (dir.x < 0) scale.x = -1; 
+    if (dir.x < 0) scale.x = -1;
     else if (dir.x > 0) scale.x = 1;
 
     // Update HP Bar visual
@@ -89,13 +90,13 @@ class Enemy extends SpriteAnimationComponent with HasGameRef<BugsShooterGame>, C
   void onCollision(Set<Vector2> points, PositionComponent other) {
     super.onCollision(points, other);
     if (other is Bullet) {
-      hp -= other.weapon.damage;
+      hp -= other.weapon.damage * gameRef.powerUpMultiplier;
       other.removeFromParent();
       
       // Improved Quick Flash effect: Fast pulse once
       add(ColorEffect(
-        Colors.white, 
-        EffectController(duration: 0.05, reverseDuration: 0.05), 
+        Colors.white,
+        EffectController(duration: 0.05, reverseDuration: 0.05),
         opacityTo: 0.7
       ));
 

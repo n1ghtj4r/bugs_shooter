@@ -11,6 +11,7 @@ dependencies:
     sdk: flutter
   flame: ^1.18.0
   flame_audio: ^2.1.1
+  flame_tiled: ^1.21.0
 
 dev_dependencies:
   flutter_test:
@@ -32,3 +33,4 @@ flutter:
     - assets/images/Interface/Tilemap/
     - assets/images/Interface/Tiles/
     - assets/audio/
+    - assets/tiles/

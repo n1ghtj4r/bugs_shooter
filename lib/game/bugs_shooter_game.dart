@@ -8,6 +8,7 @@ import 'package:flame/game.dart';
 import 'package:flame/input.dart';
 import 'package:flame/sprite.dart';
 import 'package:flame_audio/flame_audio.dart';
+import 'package:flame_tiled/flame_tiled.dart';
 import 'package:flutter/material.dart' hide Rectangle;
 import 'player.dart';
 import 'enemy.dart';
@@ -33,6 +34,9 @@ class Crosshair extends SpriteComponent with HasGameRef<BugsShooterGame> {
   void updateSprite() {
     if (gameRef.weaponsSheet != null && gameRef.selectedWeapon != null) {
       sprite = gameRef.weaponsSheet!.getSpriteById(gameRef.selectedWeapon!.crosshairId);
+    } else if (gameRef.interfaceSheet != null) {
+      // Set a temporary placeholder sprite to avoid "sprite != null" crash
+      sprite = gameRef.interfaceSheet!.getSpriteById(132);
     }
   }
 
@@ -49,16 +53,13 @@ class Crosshair extends SpriteComponent with HasGameRef<BugsShooterGame> {
       paint.color = Colors.white;
       scale = Vector2.all(1.0);
     }
-    
-    // Smoothly follow the mouse position but relative to camera if needed
-    // The position is already updated in onMouseMove, so we just handle targeting here
   }
 }
 
 class BugsShooterGame extends FlameGame 
     with HasCollisionDetection, TapCallbacks, DragCallbacks, HasKeyboardHandlerComponents, MouseMovementDetector {
   
-  static const double worldSize = 2500.0;
+  static const double worldSize = 2048.0; // 32 tiles * 16px * 4 scale
   late Player player;
   late Hud hud;
   late Crosshair crosshair;
@@ -68,7 +69,7 @@ class BugsShooterGame extends FlameGame
   ControlMode controlMode = ControlMode.joystick;
   CharacterData? selectedCharacter;
   WeaponData? selectedWeapon;
-  MapThemeData? selectedMapTheme;
+  BiomeData? selectedBiome;
   
   int score = 0;
   int health = 3;
@@ -84,8 +85,15 @@ class BugsShooterGame extends FlameGame
   int enemiesSpawnedInWave = 0;
   bool isWaveActive = false;
 
+  Set<String> collectedLetters = {};
+  double powerUpMultiplier = 1.0;
+  double powerUpTimer = 0;
+
   SpriteSheet? playerSheet, enemySheet, weaponsSheet, tilesSheet, interfaceSheet;
   Sprite? warningSeeSprite, approachingWarningSprite, bulletIconSprite, bulletShotgunSprite, skullEnemySprite, skullHeroSprite;
+  Sprite? spriteB, spriteU, spriteG, spriteS;
+
+  late TiledComponent mapComponent;
 
   @override
   Future<void> onLoad() async {
@@ -97,13 +105,17 @@ class BugsShooterGame extends FlameGame
     tilesSheet = SpriteSheet(image: await images.load('Tiles/Tilemap/tilemap_packed.png'), srcSize: Vector2.all(16));
     interfaceSheet = SpriteSheet(image: await images.load('Interface/Tilemap/tilemap_packed.png'), srcSize: Vector2.all(16));
 
-    // Load renamed individual sprites
     warningSeeSprite = Sprite(await images.load('Interface/Tiles/warning_see_enemy.png'));
     approachingWarningSprite = Sprite(await images.load('Interface/Tiles/approaching_enemy_warning.png'));
     bulletIconSprite = Sprite(await images.load('Interface/Tiles/bullet_rifle.png'));
     bulletShotgunSprite = Sprite(await images.load('Interface/Tiles/bullet_shotgun.png'));
     skullEnemySprite = Sprite(await images.load('Interface/Tiles/skull_enemy.png'));
     skullHeroSprite = Sprite(await images.load('Interface/Tiles/skull_hero.png'));
+
+    spriteB = Sprite(await images.load('Interface/Tiles/B.png'));
+    spriteU = Sprite(await images.load('Interface/Tiles/U.png'));
+    spriteG = Sprite(await images.load('Interface/Tiles/G.png'));
+    spriteS = Sprite(await images.load('Interface/Tiles/S.png'));
 
     camera = CameraComponent.withFixedResolution(width: 800, height: 600, world: world);
     add(camera);
@@ -126,11 +138,11 @@ class BugsShooterGame extends FlameGame
       'coin-a.ogg', 'coin-b.ogg', 'coin-c.ogg', 'coin-d.ogg',
       'select-a.ogg', 'lose-a.ogg'
     ]);
-    
+
     pauseEngine();
   }
 
-  void startNewGame() {
+  void startNewGame() async {
     score = 0;
     health = selectedCharacter?.maxHp ?? 3;
     ammo = maxAmmo;
@@ -139,17 +151,21 @@ class BugsShooterGame extends FlameGame
     enemiesSpawnedInWave = 0;
     isWaveActive = true;
     enemySpawner.limit = 2.0;
-    
+    collectedLetters.clear();
+    powerUpMultiplier = 1.0;
+    powerUpTimer = 0;
+
     world.children.whereType<Enemy>().forEach((e) => e.removeFromParent());
     world.children.whereType<Bullet>().forEach((b) => b.removeFromParent());
     world.children.whereType<Player>().forEach((p) => p.removeFromParent());
-    world.children.whereType<SpriteBatchComponent>().forEach((b) => b.removeFromParent());
+    world.children.whereType<TiledComponent>().forEach((m) => m.removeFromParent());
     world.children.whereType<Obstacle>().forEach((o) => o.removeFromParent());
     world.children.whereType<Wall>().forEach((w) => w.removeFromParent());
     world.children.whereType<Hazard>().forEach((h) => h.removeFromParent());
     world.children.whereType<Pickup>().forEach((p) => p.removeFromParent());
 
-    _generateMap();
+    await _loadMap();
+    _addTileCollisions();
 
     player = Player();
     player.position = Vector2(worldSize / 2, worldSize / 2);
@@ -160,7 +176,10 @@ class BugsShooterGame extends FlameGame
       crosshair.sprite = weaponsSheet!.getSpriteById(selectedWeapon!.crosshairId);
     }
 
-    if (joystick != null) joystick!.removeFromParent();
+    // Clear existing viewport components to avoid lingering buttons
+    camera.viewport.children.whereType<JoystickComponent>().forEach((j) => j.removeFromParent());
+    camera.viewport.children.whereType<HudButtonComponent>().forEach((b) => b.removeFromParent());
+
     if (controlMode == ControlMode.joystick) {
       joystick = JoystickComponent(
         knob: CircleComponent(radius: 20, paint: Paint()..color = Colors.white60),
@@ -169,62 +188,67 @@ class BugsShooterGame extends FlameGame
       );
       camera.viewport.add(joystick!);
 
-      // Shoot Button for Joystick Mode
       final shootButton = HudButtonComponent(
         button: CircleComponent(radius: 35, paint: Paint()..color = Colors.red.withOpacity(0.5)),
         buttonDown: CircleComponent(radius: 35, paint: Paint()..color = Colors.red),
         margin: const EdgeInsets.only(right: 40, bottom: 120),
         onPressed: () => _shoot(crosshair.position),
       );
+      shootButton.add(TextComponent(
+        text: 'ATTACK',
+        anchor: Anchor.center,
+        position: Vector2(35, 35),
+        textRenderer: TextPaint(style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+      ));
       camera.viewport.add(shootButton);
 
-      // Dash Button for Joystick Mode
       final dashButton = HudButtonComponent(
         button: CircleComponent(radius: 30, paint: Paint()..color = Colors.blue.withOpacity(0.5)),
         buttonDown: CircleComponent(radius: 30, paint: Paint()..color = Colors.blue),
         margin: const EdgeInsets.only(right: 120, bottom: 40),
         onPressed: () => player.dash(),
       );
+      dashButton.add(TextComponent(
+        text: 'DASH',
+        anchor: Anchor.center,
+        position: Vector2(30, 30),
+        textRenderer: TextPaint(style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+      ));
       camera.viewport.add(dashButton);
     }
+
+    _showWavePopup(); // Show Wave 1 pop-up immediately
     resumeEngine();
   }
 
-  void _generateMap() {
-    if (tilesSheet == null || selectedMapTheme == null) return;
-    final theme = selectedMapTheme!;
-    final batch = SpriteBatch(tilesSheet!.image);
-    final random = Random();
-    const double tileSize = 32.0;
+  Future<void> _loadMap() async {
+    final tmxFile = selectedBiome?.tmxFile ?? 'burning_sands.tmx';
+    mapComponent = await TiledComponent.load(
+      tmxFile,
+      Vector2.all(16),
+      prefix: 'tiles/',
+    );
+    mapComponent.scale = Vector2.all(4.0);
+    world.add(mapComponent);
+  }
 
-    for (double x = 0; x < worldSize; x += tileSize) {
-      for (double y = 0; y < worldSize; y += tileSize) {
-        final chance = random.nextDouble();
-        final sprite = tilesSheet!.getSprite(theme.floorRow, (chance < 0.85) ? theme.floorCol : theme.altCol);
-        batch.add(source: sprite.src, offset: Vector2(x, y), scale: 2.0);
+  void _addTileCollisions() {
+    final stoneLayer = mapComponent.tileMap.getLayer<TileLayer>('stone');
+    if (stoneLayer == null) return;
 
-        if (chance > 0.992 && (Vector2(x, y).distanceTo(Vector2(worldSize / 2, worldSize / 2)) > 250)) {
-          int obsId = theme.obstacleIds[random.nextInt(theme.obstacleIds.length)];
-          world.add(Obstacle(tileId: obsId, position: Vector2(x, y), size: Vector2.all(tileSize * 1.5)));
+    final tileSize = 16.0 * 4.0;
+
+    for (int row = 0; row < 32; row++) {
+      for (int col = 0; col < 32; col++) {
+        final tile = stoneLayer.tileData![row][col];
+        if (tile.tile != 0) {
+          world.add(Wall(
+            position: Vector2(col * tileSize, row * tileSize),
+            size: Vector2.all(tileSize),
+          ));
         }
       }
     }
-    world.add(SpriteBatchComponent(spriteBatch: batch));
-    _addDecorations();
-  }
-
-  void _addDecorations() {
-    // This is where you can add buildings or other complex structures
-    // For example, adding a building at a specific location:
-    final bPos = Vector2(worldSize / 2 + 200, worldSize / 2 + 200);
-    
-    // Example: adding a building SpriteComponent here...
-    // world.add(building);
-
-    world.add(Wall(
-      position: Vector2(bPos.x, bPos.y),
-      size: Vector2(192, 128), // 3x2 building footprint (3*64 x 2*64)
-    ));
   }
 
   @override
@@ -246,7 +270,7 @@ class BugsShooterGame extends FlameGame
     if (ammo <= 0) return;
 
     final weapon = selectedWeapon!;
-    ammo -= 1; 
+    ammo -= 1;
     _fireTimer = 1 / weapon.fireRate;
 
     if (ammo <= 0) {
@@ -254,7 +278,14 @@ class BugsShooterGame extends FlameGame
     }
 
     final baseDir = (target - player.position).normalized();
-    world.add(Bullet(position: player.position.clone(), direction: baseDir, weapon: weapon));
+    final bullet = Bullet(position: player.position.clone(), direction: baseDir, weapon: weapon);
+    
+    // Apply power-up damage multiplier
+    if (powerUpMultiplier > 1.0) {
+      bullet.add(ColorEffect(Colors.yellow, EffectController(duration: 0.1), opacityTo: 0.5));
+    }
+    
+    world.add(bullet);
 
     FlameAudio.play(weapon.shootSound, volume: 0.4);
   }
@@ -268,10 +299,8 @@ class BugsShooterGame extends FlameGame
   }
 
   void spawnLoot(Vector2 pos) {
-    final typeChance = Random().nextDouble();
-    PickupType type = PickupType.coin;
-    if (typeChance < 0.15) type = PickupType.heart;
-    else if (typeChance < 0.3) type = PickupType.fireRateBoost;
+    final types = [PickupType.b, PickupType.u, PickupType.g, PickupType.s];
+    final type = types[Random().nextInt(types.length)];
     world.add(Pickup(type: type, position: pos));
   }
 
@@ -281,7 +310,7 @@ class BugsShooterGame extends FlameGame
     FlameAudio.play('hurt-a.ogg', volume: 0.6); 
     camera.viewfinder.add(
       MoveEffect.by(
-        Vector2(4, 4), 
+        Vector2(4, 4),
         EffectController(duration: 0.05, reverseDuration: 0.05, repeatCount: 3),
       ),
     );
@@ -293,17 +322,18 @@ class BugsShooterGame extends FlameGame
   void update(double dt) {
     super.update(dt);
     if (health <= 0 && !paused) {
-      pauseEngine(); FlameAudio.play('lose-a.ogg'); overlays.add('GameOver');
+      pauseEngine();
+      LeaderboardManager.addEntry(score, wave);
+      FlameAudio.play('lose-a.ogg');
+      overlays.add('GameOver');
     }
 
     if (_fireTimer > 0) _fireTimer -= dt;
 
-    // In Joystick mode, if moving, update crosshair to be in front of player
     if (controlMode == ControlMode.joystick && joystick != null && !joystick!.delta.isZero()) {
       crosshair.position = player.position + joystick!.relativeDelta * 200;
     }
 
-    // Ammo Reloading
     if (reloadTimer > 0) {
       reloadTimer -= dt;
       if (reloadTimer <= 0) {
@@ -313,24 +343,88 @@ class BugsShooterGame extends FlameGame
 
     if (isWaveActive) {
       enemySpawner.update(dt);
-      if (enemiesSpawnedInWave >= (5 + wave * 3) && world.children.whereType<Enemy>().isEmpty) {
-        wave++; enemiesSpawnedInWave = 0; enemySpawner.limit = max(0.5, 2.0 - (wave * 0.1));
+      if (enemiesSpawnedInWave >= (5 + wave * 5) && world.children.whereType<Enemy>().isEmpty) {
+        wave++;
+        enemiesSpawnedInWave = 0;
+        enemySpawner.limit = max(0.4, 2.0 - (wave * 0.15));
+        _showWavePopup();
+      }
+    }
+
+    if (powerUpTimer > 0) {
+      powerUpTimer -= dt;
+      if (powerUpTimer <= 0) {
+        powerUpMultiplier = 1.0;
       }
     }
   }
 
+  void _showWavePopup() {
+    final text = TextComponent(
+      text: 'WAVE $wave',
+      anchor: Anchor.center,
+      position: Vector2(size.x / 2, size.y / 2),
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.orangeAccent,
+          fontSize: 64,
+          fontWeight: FontWeight.w900,
+          fontFamily: 'monospace',
+          shadows: [Shadow(blurRadius: 20, color: Colors.black)],
+        ),
+      ),
+    );
+    camera.viewport.add(text);
+    text.add(ScaleEffect.to(Vector2.all(1.5), EffectController(duration: 0.5, reverseDuration: 0.5)));
+    text.add(RemoveEffect(delay: 2.5));
+    FlameAudio.play('select-a.ogg', volume: 0.5);
+  }
+
+  void collectLetter(String letter) {
+    collectedLetters.add(letter);
+    if (collectedLetters.length >= 4) {
+      // BUGS complete!
+      collectedLetters.clear();
+      powerUpMultiplier = 2.0;
+      powerUpTimer = 10.0;
+      health = min(health + 1, selectedCharacter?.maxHp ?? 5);
+      
+      // Visual feedback
+      final msg = TextComponent(
+        text: 'BUGS POWER UP!',
+        anchor: Anchor.center,
+        position: Vector2(size.x / 2, size.y / 2 - 100),
+        textRenderer: TextPaint(style: const TextStyle(color: Colors.greenAccent, fontSize: 40, fontWeight: FontWeight.bold)),
+      );
+      camera.viewport.add(msg);
+      msg.add(RemoveEffect(delay: 2.0));
+      FlameAudio.play('coin-a.ogg', volume: 0.8);
+    }
+  }
+
   void _spawnEnemy() {
-    if (enemiesSpawnedInWave >= (5 + wave * 3)) return;
+    final maxInWave = 5 + (wave * 5);
+    if (enemiesSpawnedInWave >= maxInWave) return;
+    
     final vr = camera.visibleWorldRect;
+    // Default to center if VR is not yet calculated
+    final center = player.position;
+    
     final side = Random().nextInt(4);
     Vector2 p;
     switch(side) {
-      case 0: p = Vector2(vr.left + Random().nextDouble()*vr.width, vr.top - 100); break;
-      case 1: p = Vector2(vr.right + 100, vr.top + Random().nextDouble()*vr.height); break;
-      case 2: p = Vector2(vr.left + Random().nextDouble()*vr.width, vr.bottom + 100); break;
-      default: p = Vector2(vr.left - 100, vr.top + Random().nextDouble()*vr.height); break;
+      case 0: p = Vector2(vr.left + Random().nextDouble()*vr.width, vr.top - 150); break;
+      case 1: p = Vector2(vr.right + 150, vr.top + Random().nextDouble()*vr.height); break;
+      case 2: p = Vector2(vr.left + Random().nextDouble()*vr.width, vr.bottom + 150); break;
+      default: p = Vector2(vr.left - 150, vr.top + Random().nextDouble()*vr.height); break;
     }
-    p.x = p.x.clamp(0, worldSize); p.y = p.y.clamp(0, worldSize);
+    
+    // Safety check for p
+    if (p.x.isNaN || p.y.isNaN) p = center + Vector2(200, 200);
+
+    p.x = p.x.clamp(0, worldSize); 
+    p.y = p.y.clamp(0, worldSize);
+
     world.add(Enemy(position: p, wave: wave));
     enemiesSpawnedInWave++;
   }

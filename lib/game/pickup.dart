@@ -4,7 +4,7 @@ import 'package:flame_audio/flame_audio.dart';
 import 'dart:math';
 import 'bugs_shooter_game.dart';
 
-enum PickupType { coin, heart, fireRateBoost }
+enum PickupType { b, u, g, s }
 
 class Pickup extends SpriteComponent with HasGameRef<BugsShooterGame> {
   final PickupType type;
@@ -15,19 +15,15 @@ class Pickup extends SpriteComponent with HasGameRef<BugsShooterGame> {
   Pickup({
     required this.type,
     required Vector2 position,
-  }) : super(position: position, size: Vector2.all(24), anchor: Anchor.center);
+  }) : super(position: position, size: Vector2.all(32), anchor: Anchor.center);
 
   @override
   Future<void> onLoad() async {
-    int tileId = 0;
     switch (type) {
-      case PickupType.coin: tileId = 157; break; // Yellow coin icon
-      case PickupType.heart: tileId = 133; break;  // Heart icon
-      case PickupType.fireRateBoost: tileId = 139; break; // Speed icon (lightning)
-    }
-
-    if (gameRef.interfaceSheet != null) {
-      sprite = gameRef.interfaceSheet!.getSpriteById(tileId);
+      case PickupType.b: sprite = gameRef.spriteB; break;
+      case PickupType.u: sprite = gameRef.spriteU; break;
+      case PickupType.g: sprite = gameRef.spriteG; break;
+      case PickupType.s: sprite = gameRef.spriteS; break;
     }
     add(CircleHitbox());
   }
@@ -52,22 +48,16 @@ class Pickup extends SpriteComponent with HasGameRef<BugsShooterGame> {
   }
 
   void _collect() {
+    gameRef.score += 100;
+    String letter = '';
     switch (type) {
-      case PickupType.coin:
-        gameRef.score += 50;
-        FlameAudio.play('coin-${['a','b','c','d'][Random().nextInt(4)]}.ogg', volume: 0.35);
-        break;
-      case PickupType.heart:
-        if (gameRef.health < (gameRef.selectedCharacter?.maxHp ?? 3)) {
-          gameRef.health++;
-        }
-        FlameAudio.play('coin-a.ogg', volume: 0.4);
-        break;
-      case PickupType.fireRateBoost:
-        gameRef.activateFireRateBoost();
-        FlameAudio.play('select-a.ogg', volume: 0.5);
-        break;
+      case PickupType.b: letter = 'B'; break;
+      case PickupType.u: letter = 'U'; break;
+      case PickupType.g: letter = 'G'; break;
+      case PickupType.s: letter = 'S'; break;
     }
+    gameRef.collectLetter(letter);
+    FlameAudio.play('coin-${['a','b','c','d'][Random().nextInt(4)]}.ogg', volume: 0.35);
     removeFromParent();
   }
 }

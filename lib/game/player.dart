@@ -8,10 +8,15 @@ import 'enemy.dart';
 import 'wall.dart';
 import 'dart:math';
 
-class Player extends SpriteAnimationComponent with HasGameRef<BugsShooterGame>, CollisionCallbacks, KeyboardHandler {
+class Player extends PositionComponent with HasGameRef<BugsShooterGame>, CollisionCallbacks, KeyboardHandler {
   double baseSpeed = 400.0;
   final Vector2 _moveDir = Vector2.zero();
   late int row;
+  
+  // Separate components for body and weapon for better visual control
+  late SpriteAnimationComponent body;
+  late SpriteComponent weaponHand;
+  
   SpriteAnimation? walkAnim, idleAnim;
   final Set<LogicalKeyboardKey> _keys = {};
   
@@ -32,22 +37,44 @@ class Player extends SpriteAnimationComponent with HasGameRef<BugsShooterGame>, 
 
   @override
   Future<void> onLoad() async {
+    await super.onLoad();
     row = gameRef.selectedCharacter?.tileRow ?? 0;
+    
     if (gameRef.playerSheet != null) {
       walkAnim = gameRef.playerSheet!.createAnimation(row: row, stepTime: 0.1, from: 0, to: 4);
       idleAnim = gameRef.playerSheet!.createAnimation(row: row, stepTime: 0.5, from: 0, to: 1);
-      animation = idleAnim;
     }
-    // Fixed Hitbox Alignment: Center it by using Vector2.zero() since anchor is center
-    add(CircleHitbox(radius: 20, anchor: Anchor.center, position: Vector2.zero()));
+    
+    // The Body (Animation)
+    body = SpriteAnimationComponent(
+      animation: idleAnim,
+      size: size,
+      anchor: Anchor.center,
+      position: size / 2,
+    );
+    add(body);
 
-    // Ensure a sprite is always set to avoid assertion error
-    final fallbackSprite = gameRef.interfaceSheet?.getSprite(1, 5);
+    // The Weapon - Aligned with the hands of the character sprites
+    weaponHand = SpriteComponent(
+      size: Vector2.all(32), 
+      anchor: const Anchor(0.1, 0.5), // Grip point at the end of the handle
+      position: Vector2(size.x / 2, size.y / 2 + 8), 
+      priority: 10, // Always on top of the body
+    );
+    
+    if (gameRef.selectedWeapon != null && gameRef.weaponsSheet != null) {
+      weaponHand.sprite = gameRef.weaponsSheet!.getSpriteById(gameRef.selectedWeapon!.tileId);
+    }
+    add(weaponHand);
 
+    // Hitbox aligned to center
+    add(CircleHitbox(radius: 20, anchor: Anchor.center, position: size / 2));
+
+    // Status Bubble
     statusBubble = SpriteComponent(
-      sprite: gameRef.approachingWarningSprite ?? fallbackSprite,
+      sprite: gameRef.approachingWarningSprite,
       size: Vector2.all(32),
-      position: Vector2(0, -50), // Centered and slightly higher
+      position: Vector2(size.x / 2, -15),
       anchor: Anchor.center,
     );
     statusBubble!.opacity = 0;
@@ -64,14 +91,11 @@ class Player extends SpriteAnimationComponent with HasGameRef<BugsShooterGame>, 
     if (dashCooldownTimer > 0) dashCooldownTimer -= dt;
     if (damageFlashTimer > 0) {
       damageFlashTimer -= dt;
-      opacity = (damageFlashTimer * 15).toInt() % 2 == 0 ? 0.4 : 1.0;
+      body.opacity = (damageFlashTimer * 15).toInt() % 2 == 0 ? 0.4 : 1.0;
+      weaponHand.opacity = body.opacity;
     } else {
-      opacity = 1.0;
-    }
-
-    // Keep status bubble upright and centered regardless of player flip
-    if (statusBubble != null) {
-      statusBubble!.scale.x = scale.x.abs() * (statusBubble!.scale.x / statusBubble!.scale.x.abs());
+      body.opacity = 1.0;
+      weaponHand.opacity = 1.0;
     }
 
     if (isDashing) {
@@ -92,15 +116,36 @@ class Player extends SpriteAnimationComponent with HasGameRef<BugsShooterGame>, 
       if (!_moveDir.isZero()) {
         final speed = baseSpeed * (gameRef.selectedCharacter?.speedMultiplier ?? 1.0);
         position.add(_moveDir.normalized() * speed * dt);
-        if (animation != walkAnim) animation = walkAnim;
+        if (body.animation != walkAnim) body.animation = walkAnim;
       } else {
-        if (animation != idleAnim) animation = idleAnim;
+        if (body.animation != idleAnim) body.animation = idleAnim;
       }
 
-      // 360 Aiming: Always face the crosshair even when standing still
+      // 360 Aiming logic
       final dirToCrosshair = gameRef.crosshair.position - position;
-      if (dirToCrosshair.x.abs() > 5) { // Small deadzone to prevent flickering
-        scale.x = dirToCrosshair.x < 0 ? -1 : 1;
+      
+      // Flip character body to face target (upright 2D style)
+      if (dirToCrosshair.x.abs() > 2) {
+        body.scale.x = dirToCrosshair.x < 0 ? -1 : 1;
+      }
+
+      // Update held weapon rotation and position
+      if (gameRef.selectedWeapon != null && gameRef.weaponsSheet != null) {
+        weaponHand.sprite = gameRef.weaponsSheet!.getSpriteById(gameRef.selectedWeapon!.tileId);
+        
+        final angle = atan2(dirToCrosshair.y, dirToCrosshair.x);
+        weaponHand.angle = angle;
+        
+        // Keep weapon upright when aiming left
+        if (angle > pi/2 || angle < -pi/2) {
+          weaponHand.scale.y = -1;
+        } else {
+          weaponHand.scale.y = 1;
+        }
+        
+        // Push the weapon slightly forward based on aim direction to look "held"
+        final aimOffset = dirToCrosshair.normalized() * 12;
+        weaponHand.position = Vector2(size.x / 2, size.y / 2 + 8) + aimOffset;
       }
     }
 
@@ -109,8 +154,6 @@ class Player extends SpriteAnimationComponent with HasGameRef<BugsShooterGame>, 
   }
 
   void _updateStatusBubble(double dt) {
-    if (gameRef.interfaceSheet == null) return;
-
     final enemies = gameRef.world.children.whereType<Enemy>();
     if (enemies.isEmpty) {
       statusBubble?.opacity = 0;
@@ -126,13 +169,12 @@ class Player extends SpriteAnimationComponent with HasGameRef<BugsShooterGame>, 
     if (minDist < 120) {
       statusBubble?.sprite = gameRef.warningSeeSprite;
       statusBubble?.opacity = 1.0;
-      // Pulse effect when in danger
       final s = 1.0 + 0.1 * sin(DateTime.now().millisecondsSinceEpoch / 50);
-      statusBubble?.scale = Vector2(s * (scale.x < 0 ? -1 : 1), s);
+      statusBubble?.scale = Vector2.all(s);
     } else if (minDist < 250) {
       statusBubble?.sprite = gameRef.approachingWarningSprite;
       statusBubble?.opacity = 1.0;
-      statusBubble?.scale = Vector2(scale.x < 0 ? -1 : 1, 1.0);
+      statusBubble?.scale = Vector2.all(1.0);
     } else {
       statusBubble?.opacity = 0;
     }
@@ -143,7 +185,7 @@ class Player extends SpriteAnimationComponent with HasGameRef<BugsShooterGame>, 
     isDashing = true;
     dashTimer = dashDuration;
     dashCooldownTimer = dashCooldownDuration;
-    dashDirection = _moveDir.isZero() ? Vector2(scale.x, 0) : _moveDir.normalized();
+    dashDirection = _moveDir.isZero() ? Vector2(body.scale.x, 0) : _moveDir.normalized();
   }
 
   @override
@@ -160,14 +202,11 @@ class Player extends SpriteAnimationComponent with HasGameRef<BugsShooterGame>, 
     if (skullSprite != null) {
       final skull = SpriteComponent(
         sprite: skullSprite,
-        position: Vector2(0, -50), // Centered exactly above head
+        position: Vector2(size.x / 2, -15),
         size: Vector2.all(40),
         anchor: Anchor.center,
       );
       add(skull);
-      // Ensure skull isn't flipped by player scale
-      skull.scale.x = scale.x < 0 ? -1 : 1;
-
       skull.add(MoveEffect.by(Vector2(0, -60), EffectController(duration: 0.6)));
       skull.add(OpacityEffect.fadeOut(EffectController(duration: 0.6), onComplete: () => skull.removeFromParent()));
     }
@@ -176,12 +215,8 @@ class Player extends SpriteAnimationComponent with HasGameRef<BugsShooterGame>, 
   @override
   void onCollision(Set<Vector2> points, PositionComponent other) {
     super.onCollision(points, other);
-    if (other is Wall) {
-      if (points.isNotEmpty) {
-        final collisionPoint = points.first;
-        final pushDir = (position - collisionPoint).normalized();
-        position.add(pushDir * 4);
-      }
+    if (other is Wall && points.isNotEmpty) {
+      position.add((position - points.first).normalized() * 4);
     }
   }
 }

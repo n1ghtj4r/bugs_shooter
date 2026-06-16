@@ -2,25 +2,52 @@ import 'package:flutter/material.dart';
 
 enum ControlMode { joystick, keyboard }
 
-class MapThemeData {
-  final int id;
+class BiomeData {
   final String name;
   final String description;
-  final Color themeColor;
-  final int floorRow;
-  final int floorCol;
-  final int altCol;
-  final List<int> obstacleIds;
-  final List<int> hazardIds;
-  final double enemySpeedMultiplier;
+  final Color groundColor;
+  final IconData icon;
+  final String tmxFile;
 
-  MapThemeData({
-    required this.id, required this.name, required this.description, 
-    required this.themeColor, required this.floorRow, required this.floorCol,
-    required this.altCol, required this.obstacleIds, required this.hazardIds,
-    required this.enemySpeedMultiplier,
+  const BiomeData({
+    required this.name,
+    required this.description,
+    required this.groundColor,
+    required this.icon,
+    required this.tmxFile,
   });
 }
+
+final List<BiomeData> allBiomes = [
+  BiomeData(
+    name: 'Burning Sands',
+    description: 'Scorching desert wasteland.',
+    groundColor: const Color(0xFFD4A96A),
+    icon: Icons.wb_sunny,
+    tmxFile: 'burning_sands.tmx',
+  ),
+  BiomeData(
+    name: 'Emerald Jungle',
+    description: 'Dense greenery and hidden dangers.',
+    groundColor: const Color(0xFF4A7C59),
+    icon: Icons.forest,
+    tmxFile: 'emerald_jungle.tmx',
+  ),
+  BiomeData(
+    name: 'Crystal Lagoon',
+    description: 'Tropical shores and deep waters.',
+    groundColor: const Color(0xFF2A7F8F),
+    icon: Icons.pool,
+    tmxFile: 'crystal_lagoon.tmx',
+  ),
+  BiomeData(
+    name: 'Mystic Cavern',
+    description: 'Subterranean alien dungeon.',
+    groundColor: const Color(0xFF2D1B4E),
+    icon: Icons.remove_red_eye,
+    tmxFile: 'mystic_cavern.tmx',
+  ),
+];
 
 class CharacterData {
   final int id;
@@ -61,13 +88,6 @@ class WeaponData {
   });
 }
 
-final List<MapThemeData> allMaps = [
-  MapThemeData(id: 0, name: 'Burning Sands', description: 'Scorching desert wasteland.', themeColor: Colors.orange, floorRow: 1, floorCol: 0, altCol: 1, obstacleIds: [38, 39], hazardIds: [41], enemySpeedMultiplier: 1.0),
-  MapThemeData(id: 1, name: 'Emerald Jungle', description: 'Dense greenery and hidden dangers.', themeColor: Colors.green, floorRow: 3, floorCol: 2, altCol: 3, obstacleIds: [102, 103], hazardIds: [110], enemySpeedMultiplier: 1.1),
-  MapThemeData(id: 2, name: 'Crystal Lagoon', description: 'Tropical shores and deep waters.', themeColor: Colors.cyan, floorRow: 0, floorCol: 2, altCol: 3, obstacleIds: [39, 40], hazardIds: [7], enemySpeedMultiplier: 0.9),
-  MapThemeData(id: 3, name: 'Mystic Cavern', description: 'Subterranean alien dungeon.', themeColor: Colors.purple, floorRow: 0, floorCol: 0, altCol: 1, obstacleIds: [188], hazardIds: [201], enemySpeedMultiplier: 1.2),
-];
-
 final List<CharacterData> allCharacters = [
   CharacterData(id: 0, name: 'Fox', tileRow: 0, menuTilePath: 'Players/Tiles/tile_0000.png', speedMultiplier: 1.2, maxHp: 3, ability: 'Lightning Dash', description: 'Extremely fast. Dash cooldown is 30% faster.'),
   CharacterData(id: 1, name: 'Monkey', tileRow: 1, menuTilePath: 'Players/Tiles/tile_0004.png', speedMultiplier: 1.0, maxHp: 4, ability: 'Double Tap', description: 'Higher health. Weapons have faster fire rate.'),
@@ -85,3 +105,25 @@ final List<WeaponData> allWeapons = [
   WeaponData(id: 6, name: 'Heavy MG', tileId: 6, tilePath: 'Weapons/Tiles/tile_0006.png', bulletSpeed: 900, damage: 3.0, fireRate: 8.5, crosshairId: 21, shootSound: 'shoot-g.ogg', description: 'Rapid suppression machine gun.'),
   WeaponData(id: 7, name: 'Hand Cannon', tileId: 7, tilePath: 'Weapons/Tiles/tile_0007.png', bulletSpeed: 1100, damage: 10.0, fireRate: 1.0, crosshairId: 28, shootSound: 'shoot-h.ogg', description: 'Classic heavy impact handgun.'),
 ];
+
+class ScoreEntry {
+  final int score;
+  final int wave;
+  final DateTime date;
+
+  ScoreEntry({required this.score, required this.wave, required this.date});
+}
+
+class LeaderboardManager {
+  static final List<ScoreEntry> _entries = [];
+
+  static List<ScoreEntry> get entries => List.unmodifiable(_entries);
+
+  static void addEntry(int score, int wave) {
+    _entries.add(ScoreEntry(score: score, wave: wave, date: DateTime.now()));
+    _entries.sort((a, b) => b.score.compareTo(a.score));
+    if (_entries.length > 10) {
+      _entries.removeRange(10, _entries.length);
+    }
+  }
+}

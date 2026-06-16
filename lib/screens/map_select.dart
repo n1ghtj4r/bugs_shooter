@@ -12,120 +12,153 @@ class MapSelect extends StatefulWidget {
 }
 
 class _MapSelectState extends State<MapSelect> {
-  MapThemeData? selected;
+  BiomeData? selected;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black.withOpacity(0.9),
-      child: Column(
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Stack(
         children: [
-          const SizedBox(height: 50),
-          const Text(
-            'SELECT BIOME',
-            style: TextStyle(
-              fontSize: 38,
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 4,
+          // Background
+          Container(
+            decoration: const BoxDecoration(
+              color: Color(0xFF0F0F12),
+              image: DecorationImage(
+                image: AssetImage('assets/images/Tiles/Tiles/tile_0154.png'),
+                repeat: ImageRepeat.repeat,
+                opacity: 0.05,
+              ),
             ),
           ),
-          Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.all(40),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 25,
-                mainAxisSpacing: 25,
-                childAspectRatio: 1.1,
-              ),
-              itemCount: allMaps.length,
-              itemBuilder: (context, index) {
-                final map = allMaps[index];
-                final isSelected = selected == map;
-                return GestureDetector(
-                  onTap: () {
-                    FlameAudio.play('select-a.ogg');
-                    setState(() => selected = map);
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    decoration: BoxDecoration(
-                      color: isSelected ? map.themeColor.withOpacity(0.3) : Colors.white10,
-                      borderRadius: BorderRadius.circular(25),
-                      border: Border.all(
-                        color: isSelected ? map.themeColor : Colors.white24,
-                        width: 4,
+          // Content
+          SafeArea(
+            child: Column(
+              children: [
+                const SizedBox(height: 30),
+                const Text(
+                  'SELECT BATTLEFIELD',
+                  style: TextStyle(
+                    fontSize: 32,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 2,
+                    shadows: [Shadow(color: Colors.orangeAccent, blurRadius: 20)],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text('Choose the terrain for your procedural survival mission', style: TextStyle(color: Colors.white60, fontSize: 12)),
+                const SizedBox(height: 20),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isLandscape = constraints.maxWidth > constraints.maxHeight;
+                      return GridView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: isLandscape ? 4 : 2,
+                          crossAxisSpacing: 20,
+                          mainAxisSpacing: 20,
+                          childAspectRatio: isLandscape ? 0.9 : 0.85,
+                        ),
+                        itemCount: allBiomes.length,
+                        itemBuilder: (context, index) {
+                          final biome = allBiomes[index];
+                          final isSelected = selected == biome;
+                          return _biomeCard(biome, isSelected);
+                        },
+                      );
+                    },
+                  ),
+                ),
+                // Footer
+                if (selected != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 30),
+                    child: Container(
+                      width: double.infinity,
+                      constraints: const BoxConstraints(maxWidth: 400),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: selected!.groundColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                          elevation: 10,
+                        ),
+                        onPressed: () {
+                          FlameAudio.play('select-a.ogg');
+                          widget.game.selectedBiome = selected;
+                          widget.game.overlays.remove('MapSelect');
+                          widget.game.startNewGame();
+                        },
+                        child: const Text('CONFIRM BATTLEFIELD', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       ),
-                      boxShadow: isSelected 
-                        ? [BoxShadow(color: map.themeColor.withOpacity(0.4), blurRadius: 20)] 
-                        : [],
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          _getIconForBiome(map.id),
-                          size: 60,
-                          color: isSelected ? map.themeColor : Colors.white60,
-                        ),
-                        const SizedBox(height: 15),
-                        Text(
-                          map.name,
-                          style: TextStyle(
-                            fontSize: 22,
-                            color: isSelected ? Colors.white : Colors.white70,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: Text(
-                            map.description,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 12, color: Colors.white54),
-                          ),
-                        ),
-                      ],
                     ),
                   ),
-                );
-              },
+              ],
             ),
           ),
-          if (selected != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 50),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: selected!.themeColor,
-                  padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 22),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                ),
-                onPressed: () {
-                  FlameAudio.play('select-a.ogg');
-                  widget.game.selectedMapTheme = selected;
-                  widget.game.overlays.remove('MapSelect');
-                  widget.game.startNewGame();
-                },
-                child: const Text(
-                  'CONFIRM BIOME',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-              ),
+          // Back button
+          Positioned(
+            top: 20,
+            left: 20,
+            child: IconButton(
+              onPressed: () {
+                FlameAudio.play('select-a.ogg');
+                widget.game.overlays.remove('MapSelect');
+                widget.game.overlays.add('WeaponSelect');
+              },
+              icon: const Icon(Icons.arrow_back, color: Colors.white60),
             ),
+          ),
         ],
       ),
     );
   }
 
-  IconData _getIconForBiome(int id) {
-    switch (id) {
-      case 0: return Icons.wb_sunny;
-      case 1: return Icons.forest;
-      case 2: return Icons.pool;
-      case 3: return Icons.visibility;
-      default: return Icons.map;
-    }
+  Widget _biomeCard(BiomeData biome, bool isSelected) {
+    return GestureDetector(
+      onTap: () {
+        FlameAudio.play('select-a.ogg');
+        setState(() => selected = biome);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          color: isSelected ? biome.groundColor.withOpacity(0.2) : Colors.white.withOpacity(0.04),
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(
+            color: isSelected ? biome.groundColor : Colors.white10,
+            width: isSelected ? 4 : 1.5,
+          ),
+          boxShadow: isSelected ? [BoxShadow(color: biome.groundColor.withOpacity(0.3), blurRadius: 20)] : [],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.white.withOpacity(0.1) : Colors.transparent,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(biome.icon, size: 40, color: isSelected ? Colors.white : Colors.white54),
+            ),
+            const SizedBox(height: 15),
+            Text(biome.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                biome.description,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white54, fontSize: 10),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

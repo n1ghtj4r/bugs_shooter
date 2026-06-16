@@ -6,15 +6,21 @@ import 'screens/character_select.dart';
 import 'screens/weapon_select.dart';
 import 'screens/map_select.dart';
 import 'screens/game_over.dart';
+import 'screens/leaderboard.dart';
 
 import 'package:flutter/services.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Set app to landscape and full screen
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
-    SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
+    DeviceOrientation.landscapeRight,
   ]);
+  
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
   runApp(const MyApp());
 }
 
@@ -32,6 +38,7 @@ class MyApp extends StatelessWidget {
         fontFamily: 'monospace',
       ),
       home: Scaffold(
+        backgroundColor: Colors.black,
         body: GameWidget<BugsShooterGame>(
           game: BugsShooterGame(),
           overlayBuilderMap: {
@@ -40,6 +47,7 @@ class MyApp extends StatelessWidget {
             'WeaponSelect': (context, game) => WeaponSelect(game: game),
             'MapSelect': (context, game) => MapSelect(game: game),
             'GameOver': (context, game) => GameOver(game: game),
+            'Leaderboard': (context, game) => LeaderboardScreen(game: game),
           },
           initialActiveOverlays: const ['MainMenu'],
         ),
@@ -47,4 +55,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-

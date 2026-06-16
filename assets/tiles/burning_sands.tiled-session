@@ -1,12 +1,12 @@
 {
-    "activeFile": "mystic_cavern.tmx",
+    "activeFile": "burning_sands.tmx",
     "expandedProjectPaths": [
         "."
     ],
     "fileStates": {
         "burning_sands.tmx": {
             "scale": 1.5,
-            "selectedLayer": 0,
+            "selectedLayer": 2,
             "viewCenter": {
                 "x": 265.33333333333337,
                 "y": 288.6666666666667
@@ -21,23 +21,23 @@
             "selectedLayer": 0,
             "viewCenter": {
                 "x": 256.18126032570217,
-                "y": 256.18126032570217
+                "y": 255.87915978286523
             }
         },
         "emerald_jungle.tmx": {
             "scale": 1.5,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 214.66666666666663,
-                "y": 252.66666666666669
+                "x": 256,
+                "y": 256.3333333333333
             }
         },
         "mystic_cavern.tmx": {
             "scale": 1.655078125,
             "selectedLayer": 4,
             "viewCenter": {
-                "x": 256.18126032570217,
-                "y": 264.03587443946185
+                "x": 255.8791597828652,
+                "y": 255.87915978286523
             }
         }
     },
@@ -57,11 +57,11 @@
     ],
     "project": "burning_sands.tiled-project",
     "recentFiles": [
-        "burning_sands.tsx",
-        "burning_sands.tmx",
-        "crystal_lagoon.tmx",
+        "mystic_cavern.tmx",
         "emerald_jungle.tmx",
-        "mystic_cavern.tmx"
+        "crystal_lagoon.tmx",
+        "burning_sands.tsx",
+        "burning_sands.tmx"
     ],
     "tileset.lastUsedFormat": "tsx",
     "tileset.tileSize": {
