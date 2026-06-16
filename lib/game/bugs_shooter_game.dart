@@ -35,7 +35,6 @@ class Crosshair extends SpriteComponent with HasGameRef<BugsShooterGame> {
     if (gameRef.weaponsSheet != null && gameRef.selectedWeapon != null) {
       sprite = gameRef.weaponsSheet!.getSpriteById(gameRef.selectedWeapon!.crosshairId);
     } else if (gameRef.interfaceSheet != null) {
-      // Set a temporary placeholder sprite to avoid "sprite != null" crash
       sprite = gameRef.interfaceSheet!.getSpriteById(132);
     }
   }
@@ -59,7 +58,7 @@ class Crosshair extends SpriteComponent with HasGameRef<BugsShooterGame> {
 class BugsShooterGame extends FlameGame 
     with HasCollisionDetection, TapCallbacks, DragCallbacks, HasKeyboardHandlerComponents, MouseMovementDetector {
   
-  static const double worldSize = 2048.0; // 32 tiles * 16px * 4 scale
+  static const double worldSize = 2048.0; 
   late Player player;
   late Hud hud;
   late Crosshair crosshair;
@@ -117,7 +116,8 @@ class BugsShooterGame extends FlameGame
     spriteG = Sprite(await images.load('Interface/Tiles/G.png'));
     spriteS = Sprite(await images.load('Interface/Tiles/S.png'));
 
-    camera = CameraComponent.withFixedResolution(width: 800, height: 600, world: world);
+    // Use the full screen size for the camera to avoid black bars on mobile
+    camera = CameraComponent(world: world);
     add(camera);
 
     hud = Hud();
@@ -159,13 +159,15 @@ class BugsShooterGame extends FlameGame
     world.children.whereType<Bullet>().forEach((b) => b.removeFromParent());
     world.children.whereType<Player>().forEach((p) => p.removeFromParent());
     world.children.whereType<TiledComponent>().forEach((m) => m.removeFromParent());
-    world.children.whereType<Obstacle>().forEach((o) => o.removeFromParent());
     world.children.whereType<Wall>().forEach((w) => w.removeFromParent());
-    world.children.whereType<Hazard>().forEach((h) => h.removeFromParent());
     world.children.whereType<Pickup>().forEach((p) => p.removeFromParent());
 
-    await _loadMap();
-    _addTileCollisions();
+    try {
+      await _loadMap();
+      _addTileCollisions();
+    } catch (e) {
+      debugPrint('Error loading map: $e');
+    }
 
     player = Player();
     player.position = Vector2(worldSize / 2, worldSize / 2);
@@ -173,10 +175,9 @@ class BugsShooterGame extends FlameGame
     camera.follow(player);
 
     if (weaponsSheet != null && selectedWeapon != null) {
-      crosshair.sprite = weaponsSheet!.getSpriteById(selectedWeapon!.crosshairId);
+      crosshair.updateSprite();
     }
 
-    // Clear existing viewport components to avoid lingering buttons
     camera.viewport.children.whereType<JoystickComponent>().forEach((j) => j.removeFromParent());
     camera.viewport.children.whereType<HudButtonComponent>().forEach((b) => b.removeFromParent());
 
@@ -198,7 +199,7 @@ class BugsShooterGame extends FlameGame
         text: 'ATTACK',
         anchor: Anchor.center,
         position: Vector2(35, 35),
-        textRenderer: TextPaint(style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+        textRenderer: TextPaint(style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
       ));
       camera.viewport.add(shootButton);
 
@@ -212,21 +213,21 @@ class BugsShooterGame extends FlameGame
         text: 'DASH',
         anchor: Anchor.center,
         position: Vector2(30, 30),
-        textRenderer: TextPaint(style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+        textRenderer: TextPaint(style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
       ));
       camera.viewport.add(dashButton);
     }
-
-    _showWavePopup(); // Show Wave 1 pop-up immediately
+    
+    _showWavePopup();
     resumeEngine();
   }
 
   Future<void> _loadMap() async {
     final tmxFile = selectedBiome?.tmxFile ?? 'burning_sands.tmx';
+    // Use proper assets prefix for Tiled
     mapComponent = await TiledComponent.load(
       tmxFile,
       Vector2.all(16),
-      prefix: 'tiles/',
     );
     mapComponent.scale = Vector2.all(4.0);
     world.add(mapComponent);
@@ -280,13 +281,11 @@ class BugsShooterGame extends FlameGame
     final baseDir = (target - player.position).normalized();
     final bullet = Bullet(position: player.position.clone(), direction: baseDir, weapon: weapon);
     
-    // Apply power-up damage multiplier
     if (powerUpMultiplier > 1.0) {
       bullet.add(ColorEffect(Colors.yellow, EffectController(duration: 0.1), opacityTo: 0.5));
     }
     
     world.add(bullet);
-
     FlameAudio.play(weapon.shootSound, volume: 0.4);
   }
 
@@ -304,7 +303,25 @@ class BugsShooterGame extends FlameGame
     world.add(Pickup(type: type, position: pos));
   }
 
-  void activateFireRateBoost() {}
+  void collectLetter(String letter) {
+    collectedLetters.add(letter);
+    if (collectedLetters.length >= 4) {
+      collectedLetters.clear();
+      powerUpMultiplier = 2.0;
+      powerUpTimer = 10.0;
+      health = min(health + 1, selectedCharacter?.maxHp ?? 5);
+      
+      final msg = TextComponent(
+        text: 'BUGS POWER UP!',
+        anchor: Anchor.center,
+        position: Vector2(size.x / 2, size.y / 2 - 100),
+        textRenderer: TextPaint(style: const TextStyle(color: Colors.greenAccent, fontSize: 40, fontWeight: FontWeight.bold)),
+      );
+      camera.viewport.add(msg);
+      msg.add(RemoveEffect(delay: 2.0));
+      FlameAudio.play('coin-a.ogg', volume: 0.8);
+    }
+  }
 
   void playHurtSound() { 
     FlameAudio.play('hurt-a.ogg', volume: 0.6); 
@@ -380,36 +397,11 @@ class BugsShooterGame extends FlameGame
     FlameAudio.play('select-a.ogg', volume: 0.5);
   }
 
-  void collectLetter(String letter) {
-    collectedLetters.add(letter);
-    if (collectedLetters.length >= 4) {
-      // BUGS complete!
-      collectedLetters.clear();
-      powerUpMultiplier = 2.0;
-      powerUpTimer = 10.0;
-      health = min(health + 1, selectedCharacter?.maxHp ?? 5);
-      
-      // Visual feedback
-      final msg = TextComponent(
-        text: 'BUGS POWER UP!',
-        anchor: Anchor.center,
-        position: Vector2(size.x / 2, size.y / 2 - 100),
-        textRenderer: TextPaint(style: const TextStyle(color: Colors.greenAccent, fontSize: 40, fontWeight: FontWeight.bold)),
-      );
-      camera.viewport.add(msg);
-      msg.add(RemoveEffect(delay: 2.0));
-      FlameAudio.play('coin-a.ogg', volume: 0.8);
-    }
-  }
-
   void _spawnEnemy() {
     final maxInWave = 5 + (wave * 5);
     if (enemiesSpawnedInWave >= maxInWave) return;
     
     final vr = camera.visibleWorldRect;
-    // Default to center if VR is not yet calculated
-    final center = player.position;
-    
     final side = Random().nextInt(4);
     Vector2 p;
     switch(side) {
@@ -419,8 +411,7 @@ class BugsShooterGame extends FlameGame
       default: p = Vector2(vr.left - 150, vr.top + Random().nextDouble()*vr.height); break;
     }
     
-    // Safety check for p
-    if (p.x.isNaN || p.y.isNaN) p = center + Vector2(200, 200);
+    if (p.x.isNaN || p.y.isNaN) p = player.position + Vector2(200, 200);
 
     p.x = p.x.clamp(0, worldSize); 
     p.y = p.y.clamp(0, worldSize);

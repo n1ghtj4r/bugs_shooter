@@ -36,7 +36,7 @@ class Hud extends PositionComponent with HasGameRef<BugsShooterGame> {
     waveText = TextComponent(
       text: 'WAVE: 1',
       anchor: Anchor.topCenter,
-      position: Vector2(gameRef.size.x / 2, 50),
+      position: Vector2(gameRef.size.x / 2, 55),
       textRenderer: TextPaint(
         style: const TextStyle(
           color: Colors.orangeAccent,
@@ -52,12 +52,12 @@ class Hud extends PositionComponent with HasGameRef<BugsShooterGame> {
     // Health Bar Background
     add(RectangleComponent(
       position: Vector2(20, 20),
-      size: Vector2(150, 12),
+      size: Vector2(150, 15),
       paint: Paint()..color = Colors.black54,
     ));
     healthBar = RectangleComponent(
       position: Vector2(20, 20),
-      size: Vector2(150, 12),
+      size: Vector2(150, 15),
       paint: Paint()..color = Colors.redAccent,
     );
     add(healthBar);
@@ -65,10 +65,10 @@ class Hud extends PositionComponent with HasGameRef<BugsShooterGame> {
     // Ammo Icons Container
     _setupAmmoIcons();
 
-    // Reload Bar (Hidden by default)
+    // Reload Bar
     reloadBar = RectangleComponent(
-      position: Vector2(20, 40),
-      size: Vector2(120, 4),
+      position: Vector2(20, 42),
+      size: Vector2(150, 4),
       paint: Paint()..color = Colors.blueAccent.withOpacity(0.8),
     )..opacity = 0;
     add(reloadBar);
@@ -77,32 +77,29 @@ class Hud extends PositionComponent with HasGameRef<BugsShooterGame> {
     _setupWeaponIcon();
   }
 
-  void _setupBugsLetters() {
-    final fallbackSprite = gameRef.interfaceSheet?.getSpriteById(132); // Use a safe placeholder
-    for (int i = 0; i < 4; i++) {
-      final letter = SpriteComponent(
-        sprite: fallbackSprite,
-        size: Vector2.all(24),
-        position: Vector2(20 + (i * 30), 70),
-      );
-      bugsLetters.add(letter);
-      add(letter);
-    }
-  }
-
   void _setupAmmoIcons() {
-    final isShotgun = gameRef.selectedWeapon?.id == 1;
-    final bulletSprite = (isShotgun ? gameRef.bulletShotgunSprite : gameRef.bulletIconSprite)
-                         ?? gameRef.interfaceSheet?.getSprite(1, 4);
-
+    final fallbackSprite = gameRef.interfaceSheet?.getSpriteById(132);
     for (int i = 0; i < 10; i++) {
       final icon = SpriteComponent(
-        sprite: bulletSprite,
-        size: Vector2(12, 20),
-        position: Vector2(20 + (i * 15), 40),
+        sprite: fallbackSprite,
+        size: Vector2(14, 22),
+        position: Vector2(20 + (i * 18), 45),
       );
       bulletIcons.add(icon);
       add(icon);
+    }
+  }
+
+  void _setupBugsLetters() {
+    final fallbackSprite = gameRef.interfaceSheet?.getSpriteById(132);
+    for (int i = 0; i < 4; i++) {
+      final letter = SpriteComponent(
+        sprite: fallbackSprite,
+        size: Vector2.all(28),
+        position: Vector2(20 + (i * 35), 75),
+      );
+      bugsLetters.add(letter);
+      add(letter);
     }
   }
 
@@ -110,7 +107,7 @@ class Hud extends PositionComponent with HasGameRef<BugsShooterGame> {
     if (gameRef.selectedWeapon != null && gameRef.weaponsSheet != null) {
       weaponIcon = SpriteComponent(
         sprite: gameRef.weaponsSheet!.getSpriteById(gameRef.selectedWeapon!.tileId),
-        size: Vector2.all(48),
+        size: Vector2.all(64),
         position: Vector2(gameRef.size.x - 20, 20),
         anchor: Anchor.topRight,
       );
@@ -129,15 +126,16 @@ class Hud extends PositionComponent with HasGameRef<BugsShooterGame> {
 
     // Update Health
     final maxHp = gameRef.selectedCharacter?.maxHp ?? 3;
-    healthBar.size.x = 150 * (gameRef.health / maxHp);
+    healthBar.size.x = 150 * (gameRef.health / maxHp).clamp(0.0, 1.0);
 
     // Update Ammo Icons
     final isShotgun = gameRef.selectedWeapon?.id == 1;
-    final bulletSprite = isShotgun ? gameRef.bulletShotgunSprite : gameRef.bulletIconSprite;
+    final bulletSprite = (isShotgun ? gameRef.bulletShotgunSprite : gameRef.bulletIconSprite) 
+                         ?? gameRef.interfaceSheet?.getSpriteById(132);
 
     for (int i = 0; i < bulletIcons.length; i++) {
       bulletIcons[i].sprite = bulletSprite;
-      bulletIcons[i].opacity = i < gameRef.ammo ? 1.0 : 0.0;
+      bulletIcons[i].opacity = i < gameRef.ammo ? 1.0 : 0.1;
     }
 
     // Update Reload Bar
@@ -166,12 +164,13 @@ class Hud extends PositionComponent with HasGameRef<BugsShooterGame> {
       bugsLetters[3].opacity = gameRef.collectedLetters.contains('S') ? 1.0 : 0.2;
     }
 
-    // Update Weapon Icon if changed
+    // Update Weapon Icon
     if (gameRef.selectedWeapon != null && gameRef.weaponsSheet != null) {
       if (weaponIcon == null) {
         _setupWeaponIcon();
       } else {
         weaponIcon!.sprite = gameRef.weaponsSheet!.getSpriteById(gameRef.selectedWeapon!.tileId);
+        weaponIcon!.position.x = gameRef.size.x - 20;
       }
     }
   }

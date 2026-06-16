@@ -13,7 +13,7 @@ import 'package:flutter/services.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Set app to landscape and full screen
+  // Force Landscape and Full Screen for Mobile
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
@@ -39,6 +39,7 @@ class MyApp extends StatelessWidget {
       ),
       home: Scaffold(
         backgroundColor: Colors.black,
+        // Removed the fixed size Container so it fills the mobile screen completely
         body: GameWidget<BugsShooterGame>(
           game: BugsShooterGame(),
           overlayBuilderMap: {
